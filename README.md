@@ -1,5 +1,5 @@
 # This is a 288x288 wav2lip model version.
-The original repo: https://github.com/Rudrabha/Wav2Lip
+The original repo: https://github.com/primepake/wav2lip_288x288
 Some Features I will implement here
 - [x] input size 288x288
 - [x] PRelu
@@ -21,11 +21,11 @@ I trained my own model on AVSPEECH dataset and then transfer learning with my pr
 To cite this repository:
 
 ```bibtex
-@misc{Wav2Lip,
-  author={Rudrabha},
+@misc{Wav2Lip_288_288,
+  author={cookabc},
   title={Wav2Lip: Accurately Lip-syncing Videos In The Wild},
   year={2020},
-  url={https://github.com/Rudrabha/Wav2Lip}
+  url={https://github.com/cookabc/wav2lip_288}
 }
 ```
 
