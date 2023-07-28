@@ -1,20 +1,20 @@
+import argparse
+import os
+import random
+from glob import glob
 from os.path import dirname, join, basename, isfile
-from tqdm import tqdm
 
-from models import SyncNet_color as SyncNet
-import audio
-
+import cv2
+import numpy as np
 import torch
 from torch import nn
 from torch import optim
-import torch.backends.cudnn as cudnn
 from torch.utils import data as data_utils
-import numpy as np
+from tqdm import tqdm
 
-from glob import glob
-
-import os, random, cv2, argparse
+import audio
 from hparams import hparams, get_image_list
+from models import SyncNet_color as SyncNet
 
 parser = argparse.ArgumentParser(description='Code to train the expert lip-sync discriminator')
 
@@ -25,7 +25,6 @@ parser.add_argument('--checkpoint_path', help='Resumed from this checkpoint', de
 
 args = parser.parse_args()
 
-
 global_step = 0
 global_epoch = 0
 use_cuda = torch.cuda.is_available()
@@ -33,6 +32,7 @@ print('use_cuda: {}'.format(use_cuda))
 
 syncnet_T = 5
 syncnet_mel_step_size = 16
+
 
 class Dataset(object):
     def __init__(self, split):
@@ -60,8 +60,7 @@ class Dataset(object):
 
         end_idx = start_idx + syncnet_mel_step_size
 
-        return spec[start_idx : end_idx, :]
-
+        return spec[start_idx: end_idx, :]
 
     def __len__(self):
         return len(self.all_videos)
@@ -123,26 +122,29 @@ class Dataset(object):
             # H x W x 3 * T
             x = np.concatenate(window, axis=2) / 255.
             x = x.transpose(2, 0, 1)
-            x = x[:, x.shape[1]//2:]
+            x = x[:, x.shape[1] // 2:]
 
             x = torch.FloatTensor(x)
             mel = torch.FloatTensor(mel.T).unsqueeze(0)
 
             return x, mel, y
 
+
 logloss = nn.BCELoss()
+
+
 def cosine_loss(a, v, y):
     d = nn.functional.cosine_similarity(a, v)
     loss = logloss(d.unsqueeze(1), y)
 
     return loss
 
+
 def train(device, model, train_data_loader, test_data_loader, optimizer,
           checkpoint_dir=None, checkpoint_interval=None, nepochs=None):
-
     global global_step, global_epoch
     resumed_step = global_step
-    
+
     while global_epoch < nepochs:
         running_loss = 0.
         prog_bar = tqdm(enumerate(train_data_loader))
@@ -178,6 +180,7 @@ def train(device, model, train_data_loader, test_data_loader, optimizer,
 
         global_epoch += 1
 
+
 def eval_model(test_data_loader, global_step, device, model, checkpoint_dir):
     eval_steps = 1400
     print('Evaluating for {} steps'.format(eval_steps))
@@ -205,8 +208,8 @@ def eval_model(test_data_loader, global_step, device, model, checkpoint_dir):
 
         return
 
-def save_checkpoint(model, optimizer, step, checkpoint_dir, epoch):
 
+def save_checkpoint(model, optimizer, step, checkpoint_dir, epoch):
     checkpoint_path = join(
         checkpoint_dir, "checkpoint_step{:09d}.pth".format(global_step))
     optimizer_state = optimizer.state_dict() if hparams.save_optimizer_state else None
@@ -218,6 +221,7 @@ def save_checkpoint(model, optimizer, step, checkpoint_dir, epoch):
     }, checkpoint_path)
     print("Saved checkpoint:", checkpoint_path)
 
+
 def _load(checkpoint_path):
     if use_cuda:
         checkpoint = torch.load(checkpoint_path)
@@ -225,6 +229,7 @@ def _load(checkpoint_path):
         checkpoint = torch.load(checkpoint_path,
                                 map_location=lambda storage, loc: storage)
     return checkpoint
+
 
 def load_checkpoint(path, model, optimizer, reset_optimizer=False):
     global global_step
@@ -242,6 +247,7 @@ def load_checkpoint(path, model, optimizer, reset_optimizer=False):
     global_epoch = checkpoint["global_epoch"]
 
     return model
+
 
 if __name__ == "__main__":
     checkpoint_dir = args.checkpoint_dir

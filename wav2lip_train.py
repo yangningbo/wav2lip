@@ -1,33 +1,33 @@
+import argparse
+import os
+import random
+from glob import glob
 from os.path import dirname, join, basename, isfile
-from tqdm import tqdm
 
-from models import SyncNet_color as SyncNet
-from models import Wav2Lip as Wav2Lip
-import audio
-
+import cv2
+import numpy as np
 import torch
 from torch import nn
 from torch import optim
-import torch.backends.cudnn as cudnn
 from torch.utils import data as data_utils
-import numpy as np
+from tqdm import tqdm
 
-from glob import glob
-
-import os, random, cv2, argparse
+import audio
 from hparams import hparams, get_image_list
+from models import SyncNet_color as SyncNet
+from models import Wav2Lip as Wav2Lip
 
 parser = argparse.ArgumentParser(description='Code to train the Wav2Lip model without the visual quality discriminator')
 
 parser.add_argument("--data_root", help="Root folder of the preprocessed LRS2 dataset", required=True, type=str)
 
 parser.add_argument('--checkpoint_dir', help='Save checkpoints to this directory', required=True, type=str)
-parser.add_argument('--syncnet_checkpoint_path', help='Load the pre-trained Expert discriminator', required=True, type=str)
+parser.add_argument('--syncnet_checkpoint_path', help='Load the pre-trained Expert discriminator', required=True,
+                    type=str)
 
 parser.add_argument('--checkpoint_path', help='Resume from this checkpoint', default=None, type=str)
 
 args = parser.parse_args()
-
 
 global_step = 0
 global_epoch = 0
@@ -36,6 +36,7 @@ print('use_cuda: {}'.format(use_cuda))
 
 syncnet_T = 5
 syncnet_mel_step_size = 16
+
 
 class Dataset(object):
     def __init__(self, split):
@@ -76,17 +77,17 @@ class Dataset(object):
         if type(start_frame) == int:
             start_frame_num = start_frame
         else:
-            start_frame_num = self.get_frame_id(start_frame) # 0-indexing ---> 1-indexing
+            start_frame_num = self.get_frame_id(start_frame)  # 0-indexing ---> 1-indexing
         start_idx = int(80. * (start_frame_num / float(hparams.fps)))
-        
+
         end_idx = start_idx + syncnet_mel_step_size
 
-        return spec[start_idx : end_idx, :]
+        return spec[start_idx: end_idx, :]
 
     def get_segmented_mels(self, spec, start_frame):
         mels = []
         assert syncnet_T == 5
-        start_frame_num = self.get_frame_id(start_frame) + 1 # 0-indexing ---> 1-indexing
+        start_frame_num = self.get_frame_id(start_frame) + 1  # 0-indexing ---> 1-indexing
         if start_frame_num - 2 < 0: return None
         for i in range(start_frame_num, start_frame_num + syncnet_T):
             m = self.crop_audio_window(spec, i - 2)
@@ -115,7 +116,7 @@ class Dataset(object):
             img_names = list(glob(join(vidname, '*.jpg')))
             if len(img_names) <= 3 * syncnet_T:
                 continue
-            
+
             img_name = random.choice(img_names)
             wrong_img_name = random.choice(img_names)
             while wrong_img_name == img_name:
@@ -143,7 +144,7 @@ class Dataset(object):
                 continue
 
             mel = self.crop_audio_window(orig_mel.copy(), img_name)
-            
+
             if (mel.shape[0] != syncnet_mel_step_size):
                 continue
 
@@ -152,7 +153,7 @@ class Dataset(object):
 
             window = self.prepare_window(window)
             y = window.copy()
-            window[:, :, window.shape[2]//2:] = 0.
+            window[:, :, window.shape[2] // 2:] = 0.
 
             wrong_window = self.prepare_window(wrong_window)
             x = np.concatenate([window, wrong_window], axis=0)
@@ -162,6 +163,7 @@ class Dataset(object):
             indiv_mels = torch.FloatTensor(indiv_mels).unsqueeze(1)
             y = torch.FloatTensor(y)
             return x, indiv_mels, mel, y
+
 
 def save_sample_images(x, g, gt, global_step, checkpoint_dir):
     x = (x.detach().cpu().numpy().transpose(0, 2, 3, 4, 1) * 255.).astype(np.uint8)
@@ -176,12 +178,16 @@ def save_sample_images(x, g, gt, global_step, checkpoint_dir):
         for t in range(len(c)):
             cv2.imwrite('{}/{}_{}.jpg'.format(folder, batch_idx, t), c[t])
 
+
 logloss = nn.BCELoss()
+
+
 def cosine_loss(a, v, y):
     d = nn.functional.cosine_similarity(a, v)
     loss = logloss(d.unsqueeze(1), y)
 
     return loss
+
 
 device = torch.device("cuda" if use_cuda else "cpu")
 syncnet = SyncNet().to(device)
@@ -189,20 +195,22 @@ for p in syncnet.parameters():
     p.requires_grad = False
 
 recon_loss = nn.L1Loss()
+
+
 def get_sync_loss(mel, g):
-    g = g[:, :, :, g.size(3)//2:]
+    g = g[:, :, :, g.size(3) // 2:]
     g = torch.cat([g[:, :, i] for i in range(syncnet_T)], dim=1)
     # B, 3 * T, H//2, W
     a, v = syncnet(mel, g)
     y = torch.ones(g.size(0), 1).float().to(device)
     return cosine_loss(a, v, y)
 
+
 def train(device, model, train_data_loader, test_data_loader, optimizer,
           checkpoint_dir=None, checkpoint_interval=None, nepochs=None):
-
     global global_step, global_epoch
     resumed_step = global_step
- 
+
     while global_epoch < nepochs:
         print('Starting Epoch: {}'.format(global_epoch))
         running_sync_loss, running_l1_loss = 0., 0.
@@ -251,13 +259,13 @@ def train(device, model, train_data_loader, test_data_loader, optimizer,
                     average_sync_loss = eval_model(test_data_loader, global_step, device, model, checkpoint_dir)
 
                     if average_sync_loss < .75:
-                        hparams.set_hparam('syncnet_wt', 0.01) # without image GAN a lesser weight is sufficient
+                        hparams.set_hparam('syncnet_wt', 0.01)  # without image GAN a lesser weight is sufficient
 
             prog_bar.set_description('L1: {}, Sync Loss: {}'.format(running_l1_loss / (step + 1),
                                                                     running_sync_loss / (step + 1)))
 
         global_epoch += 1
-        
+
 
 def eval_model(test_data_loader, global_step, device, model, checkpoint_dir):
     eval_steps = 700
@@ -283,7 +291,7 @@ def eval_model(test_data_loader, global_step, device, model, checkpoint_dir):
             sync_losses.append(sync_loss.item())
             recon_losses.append(l1loss.item())
 
-            if step > eval_steps: 
+            if step > eval_steps:
                 averaged_sync_loss = sum(sync_losses) / len(sync_losses)
                 averaged_recon_loss = sum(recon_losses) / len(recon_losses)
 
@@ -291,8 +299,8 @@ def eval_model(test_data_loader, global_step, device, model, checkpoint_dir):
 
                 return averaged_sync_loss
 
-def save_checkpoint(model, optimizer, step, checkpoint_dir, epoch):
 
+def save_checkpoint(model, optimizer, step, checkpoint_dir, epoch):
     checkpoint_path = join(
         checkpoint_dir, "checkpoint_step{:09d}.pth".format(global_step))
     optimizer_state = optimizer.state_dict() if hparams.save_optimizer_state else None
@@ -312,6 +320,7 @@ def _load(checkpoint_path):
         checkpoint = torch.load(checkpoint_path,
                                 map_location=lambda storage, loc: storage)
     return checkpoint
+
 
 def load_checkpoint(path, model, optimizer, reset_optimizer=False, overwrite_global_states=True):
     global global_step
@@ -334,6 +343,7 @@ def load_checkpoint(path, model, optimizer, reset_optimizer=False, overwrite_glo
         global_epoch = checkpoint["global_epoch"]
 
     return model
+
 
 if __name__ == "__main__":
     checkpoint_dir = args.checkpoint_dir
@@ -361,7 +371,7 @@ if __name__ == "__main__":
 
     if args.checkpoint_path is not None:
         load_checkpoint(args.checkpoint_path, model, optimizer, reset_optimizer=False)
-        
+
     load_checkpoint(args.syncnet_checkpoint_path, syncnet, None, reset_optimizer=True, overwrite_global_states=False)
 
     if not os.path.exists(checkpoint_dir):
@@ -369,6 +379,6 @@ if __name__ == "__main__":
 
     # Train!
     train(device, model, train_data_loader, test_data_loader, optimizer,
-              checkpoint_dir=checkpoint_dir,
-              checkpoint_interval=hparams.checkpoint_interval,
-              nepochs=hparams.nepochs)
+          checkpoint_dir=checkpoint_dir,
+          checkpoint_interval=hparams.checkpoint_interval,
+          nepochs=hparams.nepochs)
