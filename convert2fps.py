@@ -1,12 +1,14 @@
-import os
 import argparse
+import os
 import shutil
-import json, subprocess, random, string
+
 import cv2
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_root', help='dataset path', default='./videos', type=str)
 parser.add_argument('--fps', help='Frame per second', default=25, type=int)
 args = parser.parse_args()
+
 
 # cmd = f"ffmpeg -y -r 25 -i {new_name} 25fps.mp4"
 
@@ -22,12 +24,13 @@ def convertVideo2Fps(src):
     except:
         os.rename('temp.mp4', src)
         print(f'file {src} wrong processing')
-    
+
+
 def check_fps(filename):
     cap = cv2.VideoCapture(filename)
     fps = cap.get(cv2.CAP_PROP_FPS)
     return fps
-    
+
 
 data_root = args.data_root
 fps = args.fps
@@ -47,4 +50,3 @@ for identity in identities:
             continue
         print(f'Convert video: {src} to 25 fps')
         convertVideo2Fps(src)
-        

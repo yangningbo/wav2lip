@@ -1,20 +1,21 @@
-import shutil
-from pytube import YouTube
-from pytube import exceptions
-import os
 import argparse
 import csv
+import os
+import shutil
 import time
+
+from pytube import YouTube
+from pytube import exceptions
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset_file', help='url video', default='dataset_csv/vietnam_train.csv', type=str)
-parser.add_argument('--is_vn', help='if vietnam dataset',  action='store_true', default=False)
+parser.add_argument('--is_vn', help='if vietnam dataset', action='store_true', default=False)
 parser.add_argument('--dataset_out', help='folder contain out dataset', default='', type=str)
 parser.add_argument('--log_file', help='log_file', default='', type=str)
 args = parser.parse_args()
 
-def downloadYouTube(youtube_link, youtube_id, path, start_segment, end_segment, downloadedYoutubeID):
 
+def downloadYouTube(youtube_link, youtube_id, path, start_segment, end_segment, downloadedYoutubeID):
     try:
         print(f'Try to download video: {youtube_link}')
         yt_obj = YouTube(youtube_link)
@@ -28,7 +29,7 @@ def downloadYouTube(youtube_link, youtube_id, path, start_segment, end_segment, 
         addNewFiles.write(f"{youtube_id}\n")
         return 0
     else:
-        out_file = filters.download(filename = 'temp_download_video.mp4')
+        out_file = filters.download(filename='temp_download_video.mp4')
         print(f'outfile: {out_file}')
         print(f'start_time {start_segment} to {end_segment}')
         cmd = f"ffmpeg -i temp_download_video.mp4 -ss {start_segment} -to {end_segment} temp.mp4"
@@ -36,10 +37,10 @@ def downloadYouTube(youtube_link, youtube_id, path, start_segment, end_segment, 
         os.remove(f'temp_download_video.mp4')
         cnt = 0
         new_name = str(cnt).zfill(5) + '.mp4'
-        while os.path.exists(os.path.join(output_id,  new_name)):
+        while os.path.exists(os.path.join(output_id, new_name)):
             cnt += 1
             new_name = str(cnt).zfill(5) + '.mp4'
-        
+
         print(f"Move file temp.mp4 to {os.path.join(output_id, new_name)}")
         shutil.move('temp.mp4', os.path.join(output_id, new_name))
 
@@ -64,9 +65,9 @@ if args.is_vn:
 
 with open(f"{dataset_file}", "r") as f:
     reader = csv.reader(f, delimiter="\t")
-   
+
     for i, line in enumerate(reader):
-        
+
         # youtube_link = f"https://www.youtube.com/watch?v={1Uf_F74fBns}"
         if args.is_vn:
             print(line[0])

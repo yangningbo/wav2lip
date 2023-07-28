@@ -20,11 +20,9 @@ from models import Wav2Lip as Wav2Lip
 parser = argparse.ArgumentParser(description='Code to train the Wav2Lip model without the visual quality discriminator')
 
 parser.add_argument("--data_root", help="Root folder of the preprocessed LRS2 dataset", required=True, type=str)
-
 parser.add_argument('--checkpoint_dir', help='Save checkpoints to this directory', required=True, type=str)
 parser.add_argument('--syncnet_checkpoint_path', help='Load the pre-trained Expert discriminator', required=True,
                     type=str)
-
 parser.add_argument('--checkpoint_path', help='Resume from this checkpoint', default=None, type=str)
 
 args = parser.parse_args()
