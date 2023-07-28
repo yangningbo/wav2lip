@@ -1,7 +1,8 @@
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import math
 
 
 def conv3x3(in_planes, out_planes, strd=1, padding=1, bias=False):
@@ -56,7 +57,6 @@ class ConvBlock(nn.Module):
 
 
 class Bottleneck(nn.Module):
-
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None):

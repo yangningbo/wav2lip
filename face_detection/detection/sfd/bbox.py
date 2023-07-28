@@ -1,12 +1,7 @@
 from __future__ import print_function
-import os
-import sys
-import cv2
-import random
-import datetime
-import time
+
 import math
-import argparse
+
 import numpy as np
 import torch
 
@@ -107,6 +102,7 @@ def decode(loc, priors, variances):
     boxes[:, :2] -= boxes[:, 2:] / 2
     boxes[:, 2:] += boxes[:, :2]
     return boxes
+
 
 def batch_decode(loc, priors, variances):
     """Decode locations from predictions using priors to undo

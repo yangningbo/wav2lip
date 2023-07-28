@@ -1,11 +1,12 @@
 from __future__ import print_function
+
+import math
 import os
 import sys
-import time
-import torch
-import math
-import numpy as np
+
 import cv2
+import numpy as np
+import torch
 
 
 def _gaussian(
@@ -28,7 +29,7 @@ def _gaussian(
     for i in range(height):
         for j in range(width):
             gauss[i][j] = amplitude * math.exp(-(math.pow((j + 1 - center_x) / (
-                sigma_horz * width), 2) / 2.0 + math.pow((i + 1 - center_y) / (sigma_vert * height), 2) / 2.0))
+                    sigma_horz * width), 2) / 2.0 + math.pow((i + 1 - center_y) / (sigma_vert * height), 2) / 2.0))
     if normalize:
         gauss = gauss / np.sum(gauss)
     return gauss
@@ -48,7 +49,7 @@ def draw_gaussian(image, point, sigma):
     img_y = [int(max(1, ul[1])), int(min(br[1], image.shape[0]))]
     assert (g_x[0] > 0 and g_y[1] > 0)
     image[img_y[0] - 1:img_y[1], img_x[0] - 1:img_x[1]
-          ] = image[img_y[0] - 1:img_y[1], img_x[0] - 1:img_x[1]] + g[g_y[0] - 1:g_y[1], g_x[0] - 1:g_x[1]]
+    ] = image[img_y[0] - 1:img_y[1], img_x[0] - 1:img_x[1]] + g[g_y[0] - 1:g_y[1], g_x[0] - 1:g_x[1]]
     image[image > 1] = 1
     return image
 
@@ -123,7 +124,7 @@ def crop(image, center, scale, resolution=256.0):
     oldX = np.array([max(1, ul[0] + 1), min(br[0], wd)], dtype=np.int32)
     oldY = np.array([max(1, ul[1] + 1), min(br[1], ht)], dtype=np.int32)
     newImg[newY[0] - 1:newY[1], newX[0] - 1:newX[1]
-           ] = image[oldY[0] - 1:oldY[1], oldX[0] - 1:oldX[1], :]
+    ] = image[oldY[0] - 1:oldY[1], oldX[0] - 1:oldX[1], :]
     newImg = cv2.resize(newImg, dsize=(int(resolution), int(resolution)),
                         interpolation=cv2.INTER_LINEAR)
     return newImg
@@ -169,6 +170,7 @@ def get_preds_fromhm(hm, center=None, scale=None):
 
     return preds, preds_orig
 
+
 def get_preds_fromhm_batch(hm, centers=None, scales=None):
     """Obtain (x,y) coordinates given a set of N heatmaps. If the centers
     and the scales is provided the function will return the points also in
@@ -208,6 +210,7 @@ def get_preds_fromhm_batch(hm, centers=None, scales=None):
                     preds[i, j], centers[i], scales[i], hm.size(2), True)
 
     return preds, preds_orig
+
 
 def shuffle_lr(parts, pairs=None):
     """Shuffle the points left-right according to the axis of symmetry
@@ -252,6 +255,7 @@ def flip(tensor, is_label=False):
         tensor = tensor.flip(tensor.ndimension() - 1)
 
     return tensor
+
 
 # From pyzolib/paths.py (https://bitbucket.org/pyzo/pyzolib/src/tip/paths.py)
 
