@@ -1,8 +1,8 @@
-import torch
 from torch import nn
 from torch.nn import functional as F
 
 from .conv2 import Conv2d
+
 
 class SyncNet_color(nn.Module):
     def __init__(self):
@@ -18,7 +18,6 @@ class SyncNet_color(nn.Module):
             Conv2d(64, 64, kernel_size=3, stride=1, padding=1, residual=True),
             Conv2d(64, 64, kernel_size=3, stride=1, padding=1, residual=True),
 
-            
             Conv2d(64, 128, kernel_size=3, stride=2, padding=1),
             Conv2d(128, 128, kernel_size=3, stride=1, padding=1, residual=True),
             Conv2d(128, 128, kernel_size=3, stride=1, padding=1, residual=True),
@@ -36,7 +35,7 @@ class SyncNet_color(nn.Module):
             Conv2d(512, 512, kernel_size=3, stride=2, padding=0),
             Conv2d(512, 512, kernel_size=3, stride=1, padding=0),
             Conv2d(512, 512, kernel_size=2, stride=1, padding=0),
-            Conv2d(512, 512, kernel_size=1, stride=1, padding=0),)
+            Conv2d(512, 512, kernel_size=1, stride=1, padding=0), )
 
         self.audio_encoder = nn.Sequential(
             Conv2d(1, 32, kernel_size=3, stride=1, padding=1),
@@ -56,7 +55,7 @@ class SyncNet_color(nn.Module):
             Conv2d(256, 256, kernel_size=3, stride=1, padding=1, residual=True),
 
             Conv2d(256, 512, kernel_size=3, stride=1, padding=0),
-            Conv2d(512, 512, kernel_size=1, stride=1, padding=0),)
+            Conv2d(512, 512, kernel_size=1, stride=1, padding=0), )
 
     def forward(self, audio_sequences, face_sequences):
         # print(f'audio_sequences: {audio_sequences.size()}') # audio_sequences := (B, dim, T)
@@ -68,6 +67,5 @@ class SyncNet_color(nn.Module):
 
         audio_embedding = F.normalize(audio_embedding, p=2, dim=1)
         face_embedding = F.normalize(face_embedding, p=2, dim=1)
-
 
         return audio_embedding, face_embedding
